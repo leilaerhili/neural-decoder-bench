@@ -1,0 +1,48 @@
+# Core experiment grid (docs/PLAN.md, section 4). Draft until the Phase 1
+# compute pilot; frozen in docs/protocol.md before Phase 4.
+
+[codes]
+surface = ["surface_d3", "surface_d5", "surface_d7"]  # d3 = debugging only
+bb = ["bb72", "bb144"]                                  # bb144 gated by pilot (G0c-BB)
+color = ["color_d3", "color_d5", "color_d7"]            # d3 = debugging only; new-code generalization test
+basis = "Z"
+
+[noise]
+models = ["uniform", "si1000"]
+
+[noise.eval_p]   # evaluation grids, chosen so failures are measurable
+surface_d5 = [0.001, 0.002, 0.003, 0.005]
+surface_d7 = [0.001, 0.002, 0.003, 0.005]
+bb72 = [0.001, 0.002, 0.003, 0.004]
+bb144 = [0.002, 0.003, 0.004]
+color_d5 = [0.001, 0.002, 0.003]
+color_d7 = [0.001, 0.002, 0.003]
+
+[noise.train_p]  # starting points; calibrated per (model, code, noise) in Phase 2/4/5
+uniform_surface = 0.007   # Cascade paper
+uniform_bb = 0.0055       # Cascade paper
+uniform_color = 0.005     # no paper value; calibrated like SI1000
+si1000_candidates = [0.002, 0.003, 0.004, 0.005]
+
+[decoders]
+reference = ["relay_bp"]                 # every cell
+anchor = "tesseract"                     # long-beam; every surface and color cell, selected BB cells
+sanity = ["pymatching"]                  # surface code only
+neural = ["cascade", "gnn"]
+optional = ["transformer"]
+
+[decoders.tesseract_anchor_p]           # BB codes: Tesseract is ~100-1000x slower than Relay-BP
+bb72 = [0.001, 0.002]
+bb144 = [0.002]
+
+[training]
+sample_budget = 1e8          # per run; learning curves at 1e6, 3e6, 1e7, 3e7, 1e8
+tuning_runs_per_model = 6    # short runs (1e7 samples) on surface_d5/uniform
+seeds_dev_config = 3         # surface_d5/uniform; 1 seed elsewhere
+
+[evaluation]
+max_failures = 100
+max_shots_neural = 1e6
+max_shots_relay_bp = 1e5
+max_shots_tesseract = 1e4    # surface; BB anchors 1e3-1e4. CPU-bound, see PLAN.md section 6
+paired_shots = 1e4           # fixed shot count for paired tests

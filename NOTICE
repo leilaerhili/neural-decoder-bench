@@ -1,0 +1,4 @@
+This repository includes circuits derived from quantumlib/tesseract-decoder
+(https://github.com/quantumlib/tesseract-decoder), licensed under the Apache
+License 2.0. Files: src/ndbench/circuits/data/*.stim (noise removed) and
+tests/data/*.stim (unmodified). See scripts/vendor_circuits.py.

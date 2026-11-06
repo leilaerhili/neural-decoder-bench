@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ndbench"
+version = "0.0.1"
+description = "A controlled benchmark of neural decoders for quantum error correction"
+authors = [{ name = "Leila Erhili" }]
+readme = "README.md"
+# sinter (needed by the baseline decoders) does not build on 3.13 yet.
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.26", "scipy>=1.11", "stim>=1.15"]
+
+[project.optional-dependencies]
+baselines = [
+    "sinter>=1.15",
+    "pymatching>=2.2",
+    "tesseract-decoder",
+    "relay-bp[stim]>=0.2",
+    "beliefmatching",       # needed by relay_bp.stim
+]
+nn = ["torch>=2.4", "torch-geometric>=2.5"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"ndbench.circuits" = ["data/*.stim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -m 'not slow'"
+markers = ["slow: runs reference decoders on BB codes (minutes)"]

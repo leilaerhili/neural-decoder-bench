@@ -1,0 +1,100 @@
+Metadata-Version: 2.4
+Name: ndbench
+Version: 0.0.1
+Summary: A controlled benchmark of neural decoders for quantum error correction
+Author: Leila Erhili
+License: MIT
+Requires-Python: <3.13,>=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: NOTICE
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.11
+Requires-Dist: stim>=1.15
+Provides-Extra: baselines
+Requires-Dist: sinter>=1.15; extra == "baselines"
+Requires-Dist: pymatching>=2.2; extra == "baselines"
+Requires-Dist: tesseract-decoder; extra == "baselines"
+Requires-Dist: relay-bp[stim]>=0.2; extra == "baselines"
+Requires-Dist: beliefmatching; extra == "baselines"
+Provides-Extra: nn
+Requires-Dist: torch>=2.4; extra == "nn"
+Requires-Dist: torch-geometric>=2.5; extra == "nn"
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Dynamic: license-file
+
+# neural-decoder-bench
+
+A controlled benchmark of neural decoders for quantum error correction.
+
+Neural decoders are usually reported on their own codes, noise models and
+training setups, so their results can't be compared directly. This repository
+trains and evaluates them under identical conditions: same circuits, same
+noise, same training budget, same test shots. It scores each decoder on
+accuracy, decoding speed and training cost.
+
+**Core study:** Cascade and a GNN decoder on the rotated surface code and the
+[[144,12,12]] Gross code (with [[72,12,6]] for development), under uniform
+depolarizing and SI1000 noise. Tesseract and Relay-BP are the references.
+See [`docs/PLAN.md`](docs/PLAN.md).
+
+## Status
+
+| Component | State |
+|---|---|
+| Circuits (surface d3/5/7, BB [[72,12,6]], [[144,12,12]], X and Z) | done |
+| Noise models: uniform, SI1000 (reproduces the reference circuits exactly) | done, tested |
+| Seeded sampling, train/val/test seed splits | done, tested |
+| Reference decoders: PyMatching, Tesseract (paper presets), Relay-BP | done |
+| Evaluation runner (paired shots, Wilson CIs, provenance) | done, tested |
+| Cascade | Phase 2 (stub with spec) |
+| GNN | Phase 3 (stub with spec) |
+
+## Setup
+
+Python 3.11 or 3.12 (sinter does not build on 3.13 yet).
+
+```bash
+uv venv -p 3.12 .venv && source .venv/bin/activate
+uv pip install -e ".[baselines,dev]"
+pytest                 # fast tests (~5 s)
+pytest -m slow         # reference decoders on BB codes (minutes)
+```
+
+Evaluate a reference decoder on one cell:
+
+```bash
+python scripts/eval_reference.py --decoder relay_bp --code bb72 --noise si1000 \
+    --p 0.002 --max-shots 2000 --out results/reference.jsonl
+```
+
+## Layout
+
+```
+src/ndbench/
+  circuits/   fixed circuit set (noiseless, vendored) + library.noisy(code, noise, p)
+  noise/      uniform and SI1000 noise models
+  codes/      BB code check matrices (for the Cascade torus layout)
+  data/       seeded Stim sampling, seed splits
+  decoders/   common interface; PyMatching, Tesseract, Relay-BP wrappers
+  models/     Cascade, GNN (and optional transformer)
+  eval/       runner, statistics
+configs/      experiment grid
+scripts/      CLI entry points, circuit vendoring
+docs/         PLAN.md, decisions.md
+tests/        pytest suite (+ reference SI1000 circuits)
+```
+
+## Conventions
+
+- A **cell** is (code, basis, noise, p). Test shots for a cell come from a fixed
+  seed, so every decoder sees the same shots.
+- **LER** is reported per shot, per round, and per round per logical qubit.
+  A shot fails if any logical observable is wrong.
+- Every result row records the decoder settings, seed, git commit and package versions.
+
+## Credits
+
+Circuits are derived from [quantumlib/tesseract-decoder](https://github.com/quantumlib/tesseract-decoder)
+(Apache-2.0); see `NOTICE`.
