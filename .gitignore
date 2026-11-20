@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv*/
+*.pt
+*.ckpt
+wandb/
+# Raw outputs stay out of git; small summary tables (csv/jsonl) are fine.
+results/**/*.npz
+results/**/*.b8
+checkpoints/
+!results/.gitkeep
