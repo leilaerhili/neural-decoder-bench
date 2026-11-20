@@ -56,7 +56,7 @@ A fair, side-by-side comparison of neural decoders for quantum error correction.
 
 - Email the Cascade authors asking for their code.
 - Ask about university computing time.
-- Rent a GPU and train Cascade on the distance-5 and distance-7 surface codes.
+- Rent a GPU and train Cascade on the distance-5 and distance-7 surface codes, following [`docs/GPU_RUNBOOK.md`](docs/GPU_RUNBOOK.md).
 
 ## How to run it
 

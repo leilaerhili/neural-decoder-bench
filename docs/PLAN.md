@@ -55,7 +55,7 @@ Done in the skeleton:
 To do:
 1. Parallel evaluation for CPU decoders (multiprocessing over batches, or sinter directly).
 2. CPU cost table: seconds per shot for Tesseract (short- and long-beam) and Relay-BP on every core cell, from ~100 shots each. Then fix the reference sweep: shot caps and p grid per decoder so the whole sweep fits the CPU budget.
-3. Reference sweep (D9): Relay-BP on every cell; Tesseract long-beam on every surface- and color-code cell and at the BB anchor cells in `configs/grid.toml`; PyMatching on the surface code.
+3. Reference sweep (D9), `scripts/reference_sweep.py`; surface d = 5 done, and PyMatching on d = 7 (`results/reference_surface.jsonl`, `docs/results/2026-11-20_reference_surface.md`); Tesseract on d = 7 needs a many-core machine (~seconds/shot): Relay-BP on every cell; Tesseract long-beam on every surface- and color-code cell and at the BB anchor cells in `configs/grid.toml`; PyMatching on the surface code.
 4. Compare with published numbers where the circuit is the same: Tesseract paper results on these exact circuits.
 5. Analysis scaffolding: `analysis/` scripts that turn result JSONL into the figures in section 3, run on the reference results first.
 
@@ -66,9 +66,9 @@ To do:
 
 1. ✅ Detector layout: map each detector to (round, row, col) from its coordinates; unit test that the mapping is a bijection onto the (R, d+1, d+1) grid's occupied cells (`models/layout.py`).
 2. ✅ Model per `ndbench/models/cascade.py`; readout pools over the logical observable's support.
-3. ✅ Training loop (`ndbench/training.py`): on-the-fly Stim sampling, BCE, AdamW for every model (decision 2026-11-20), warmup + cosine schedule, EMA, checkpoints at 1e6, 3e6, 1e7, 3e7, 1e8 samples. Still to add for GPU runs: sampling in worker processes, bf16, and the paper's short low-p curriculum.
+3. ✅ Training loop (`ndbench/training.py`): on-the-fly Stim sampling, BCE, AdamW for every model (decision 2026-11-20), warmup + cosine schedule, EMA, checkpoints at 1e6, 3e6, 1e7, 3e7, 1e8 samples. GPU-ready (2026-11-20): resumable from `latest.pt` with an identical result, parallel sampling workers with a fixed shot order, bf16 on CUDA, the paper's low-p curriculum (`--curriculum 0.02`). Step-by-step instructions: `docs/GPU_RUNBOOK.md`.
 3b. ✅ First run (CPU, d = 3, 2.5M shots): beats PyMatching, ties Tesseract on uniform noise; see `docs/results/2026-11-20_cascade_d3_first_run.md`.
-4. **Surface pilot (G0c-surface):** rent a GPU for ~2 hours; measure training throughput (samples/s) for Cascade at H = 128 and the Stim sampling rate on that machine's CPUs. If sampling can't keep up, pre-generate shards on a CPU box.
+4. **Surface pilot (G0c-surface):** rent a GPU; run `scripts/benchmark_training.py` (5 minutes) for training throughput and projected cost per run. Sampling won't be the bottleneck: one CPU worker generates ~480k d = 5 shots/s.
 5. Tuning: 6 short runs (1e7 samples): learning rate × {H = 64, 128}.
 6. Train `surface_d5`, uniform, p_train = 0.7%, 3 seeds; then `surface_d7`, 1 seed.
 

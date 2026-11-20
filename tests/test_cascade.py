@@ -103,3 +103,63 @@ def test_learns_to_beat_trivial(tmp_path):
     nn_err = (dec.decode(shots.dets) != shots.obs).any(axis=1).mean()
     trivial_err = shots.obs.any(axis=1).mean()
     assert nn_err < 0.6 * trivial_err
+
+
+# --- GPU-readiness: deterministic shot stream, parallel workers, resume -----
+
+from ndbench.training import block_p, block_seed, ordered_batches  # noqa: E402
+from ndbench.data import split_of  # noqa: E402
+
+
+def _tiny_cfg(**kw):
+    base = dict(code="surface_d3", noise="uniform", p_train=0.005, model=SMALL, samples=512 * 12,
+                batch=512, block_steps=3, warmup_steps=2, log_every=4, save_every=5,
+                val_shots=500, device="cpu", checkpoints_at=[])
+    base.update(kw)
+    return TrainConfig(**base)
+
+
+def _batches(cfg, start=0):
+    lay = SurfaceLayout.from_circuit(noiseless(cfg.code, cfg.basis))
+    return [g.numpy().copy() for g, _ in ordered_batches(cfg, lay, start)]
+
+
+def test_shot_stream_same_for_any_number_of_workers():
+    serial = _batches(_tiny_cfg(workers=0))
+    parallel = _batches(_tiny_cfg(workers=2))
+    assert len(serial) == len(parallel) == 12
+    for a, b in zip(serial, parallel):
+        np.testing.assert_array_equal(a, b)
+
+
+def test_shot_stream_resumes_mid_block():
+    full = _batches(_tiny_cfg())
+    tail = _batches(_tiny_cfg(), start=7)  # step 7 is in the middle of block 2
+    for a, b in zip(full[7:], tail):
+        np.testing.assert_array_equal(a, b)
+
+
+def test_training_seeds_stay_in_train_range_and_curriculum_ramps():
+    cfg = _tiny_cfg(samples=512 * 1000, curriculum_frac=0.1)
+    assert all(split_of(block_seed(cfg, b)) == "train" for b in range(0, 400))
+    ps = [block_p(cfg, b) for b in range(0, 60)]
+    assert ps[0] == pytest.approx(0.25 * 0.005) and ps[-1] == pytest.approx(0.005)
+    assert all(x <= y for x, y in zip(ps, ps[1:]))
+    assert block_p(_tiny_cfg(), 0) == 0.005  # no curriculum by default
+
+
+def test_interrupted_training_resumes_to_identical_result(tmp_path):
+    cfg = _tiny_cfg()
+    uninterrupted = load_checkpoint(train(cfg, tmp_path / "a", quiet=True))[1]["weights"]
+    stopped = train(cfg, tmp_path / "b", quiet=True, stop_after_steps=7)
+    assert stopped.name == "latest.pt"
+    resumed = load_checkpoint(train(cfg, tmp_path / "b", quiet=True))[1]["weights"]
+    assert not (tmp_path / "b" / "latest.pt").exists()
+    for k in uninterrupted:
+        assert torch.allclose(uninterrupted[k].float(), resumed[k].float(), atol=1e-6), k
+
+
+def test_resume_refuses_a_different_config(tmp_path):
+    train(_tiny_cfg(), tmp_path, quiet=True, stop_after_steps=6)
+    with pytest.raises(ValueError):
+        train(_tiny_cfg(lr=5e-4), tmp_path, quiet=True)
