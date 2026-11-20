@@ -67,6 +67,7 @@ To do:
 1. ✅ Detector layout: map each detector to (round, row, col) from its coordinates; unit test that the mapping is a bijection onto the (R, d+1, d+1) grid's occupied cells (`models/layout.py`).
 2. ✅ Model per `ndbench/models/cascade.py`; readout pools over the logical observable's support.
 3. ✅ Training loop (`ndbench/training.py`): on-the-fly Stim sampling, BCE, AdamW for every model (decision 2026-11-20), warmup + cosine schedule, EMA, checkpoints at 1e6, 3e6, 1e7, 3e7, 1e8 samples. Still to add for GPU runs: sampling in worker processes, bf16, and the paper's short low-p curriculum.
+3b. ✅ First run (CPU, d = 3, 2.5M shots): beats PyMatching, ties Tesseract on uniform noise; see `docs/results/2026-11-20_cascade_d3_first_run.md`.
 4. **Surface pilot (G0c-surface):** rent a GPU for ~2 hours; measure training throughput (samples/s) for Cascade at H = 128 and the Stim sampling rate on that machine's CPUs. If sampling can't keep up, pre-generate shards on a CPU box.
 5. Tuning: 6 short runs (1e7 samples): learning rate × {H = 64, 128}.
 6. Train `surface_d5`, uniform, p_train = 0.7%, 3 seeds; then `surface_d7`, 1 seed.

@@ -10,3 +10,4 @@ results/**/*.npz
 results/**/*.b8
 checkpoints/
 !results/.gitkeep
+runs/
