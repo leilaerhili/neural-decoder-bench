@@ -79,12 +79,17 @@ class TrainConfig:
 
 
 def pick_device(name: str) -> torch.device:
+    """"auto" = an NVIDIA GPU if there is one, otherwise the CPU.
+
+    Apple's GPU backend ("mps") is never picked automatically: its 3D
+    convolutions crash the whole process on some macOS versions
+    (NSInvalidArgumentException in MPSNDArray, seen 2026-11-20), and the crash
+    can't be caught from Python. Pass device="mps" explicitly to try it anyway.
+    """
     if name != "auto":
         return torch.device(name)
     if torch.cuda.is_available():
         return torch.device("cuda")
-    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-        return torch.device("mps")
     return torch.device("cpu")
 
 

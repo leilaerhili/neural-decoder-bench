@@ -122,3 +122,11 @@ uniform noise, PyMatching gets *worse* from d = 5 to d = 7 at p = 0.5%, i.e.
 paper's p_train = 0.7% likely sits above threshold. The first GPU session
 calibrates p_train ∈ {0.3%, 0.5%, 0.7%} on d = 5 (scored on identical test
 shots) before the learning-rate runs. Tuning budget stays at 5–6 short runs.
+
+## 2026-11-20: Never use Apple's GPU (MPS) automatically
+On a MacBook, `device="auto"` picked Apple's GPU and training crashed the whole
+process (`NSInvalidArgumentException ... MPSNDArray arrayViewWithShape`), a
+PyTorch/macOS incompatibility in 3D convolutions that Python can't catch.
+"auto" now means: NVIDIA GPU if present, else CPU. Small laptop runs are fine
+on the CPU, and real training runs on rented NVIDIA GPUs. `--device mps` still
+works for anyone who wants to try it.
