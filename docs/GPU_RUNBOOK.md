@@ -65,12 +65,35 @@ the whole core project has to fit in about $150.
 tmux new -s train
 source .venv/bin/activate
 
-# First: the 6 short tuning runs (1e7 samples each), on distance 5
-for H in 64 128; do for LR in 3e-4 1e-3 3e-3; do
-  python scripts/train_cascade.py --code surface_d5 --p-train 0.007 --samples 1e7 \
-      --batch 4096 --hidden $H --layers 5 --lr $LR --workers 4 --curriculum 0.02 \
-      --out runs/tune_d5_H${H}_lr${LR}
-done; done
+# First: 5 short tuning runs (1e7 samples each), on distance 5.
+# (a) Which training noise level? Uniform p = 0.5% is already above threshold
+#     on our circuits (docs/results/2026-11-20_reference_surface.md), so the
+#     paper's 0.7% may be too high.
+for PT in 0.003 0.005 0.007; do
+  python scripts/train_cascade.py --code surface_d5 --p-train $PT --samples 1e7 \
+      --batch 4096 --hidden 128 --layers 5 --lr 1e-3 --workers 4 --curriculum 0.02 \
+      --out runs/tune_d5_p${PT}
+done
+```
+
+The validation sets differ between those runs (each is at its own p), so
+compare them on the *same* test shots instead:
+
+```bash
+for PT in 0.003 0.005 0.007; do
+  python scripts/eval_checkpoint.py runs/tune_d5_p${PT}/final.pt --noise uniform --p 0.003 --shots 200000
+done
+```
+
+Pick the p_train with the fewest errors, then two learning-rate runs at it:
+
+```bash
+PT=0.005   # <- the winner from above
+for LR in 3e-4 3e-3; do
+  python scripts/train_cascade.py --code surface_d5 --p-train $PT --samples 1e7 \
+      --batch 4096 --hidden 128 --layers 5 --lr $LR --workers 4 --curriculum 0.02 \
+      --out runs/tune_d5_p${PT}_lr${LR}
+done
 ```
 
 Detach with `Ctrl-b` then `d`. Reattach later with `tmux attach -t train`.
@@ -80,17 +103,18 @@ Watch progress from another terminal:
 tail -f runs/*/log.jsonl
 ```
 
-Pick the setting with the lowest final `val_ler_ema`, then the real runs
-(replace H and LR with the winners):
+Compare the learning rates the same way (all three now share p_train, so `val_ler_ema`
+in each `log.jsonl` works too). Then the real runs, with the winning p_train and LR:
 
 ```bash
+LR=1e-3   # <- the winning learning rate (1e-3 is the run from the noise-level step)
 for SEED in 0 1 2; do
-  python scripts/train_cascade.py --code surface_d5 --p-train 0.007 --samples 1e8 \
-      --batch 4096 --hidden 128 --layers 5 --lr 1e-3 --workers 4 --curriculum 0.02 \
+  python scripts/train_cascade.py --code surface_d5 --p-train $PT --samples 1e8 \
+      --batch 4096 --hidden 128 --layers 5 --lr $LR --workers 4 --curriculum 0.02 \
       --seed $SEED --out runs/cascade_d5_uniform_s$SEED
 done
-python scripts/train_cascade.py --code surface_d7 --p-train 0.007 --samples 1e8 \
-    --batch 4096 --hidden 128 --layers 7 --lr 1e-3 --workers 4 --curriculum 0.02 \
+python scripts/train_cascade.py --code surface_d7 --p-train $PT --samples 1e8 \
+    --batch 4096 --hidden 128 --layers 7 --lr $LR --workers 4 --curriculum 0.02 \
     --out runs/cascade_d7_uniform_s0
 ```
 

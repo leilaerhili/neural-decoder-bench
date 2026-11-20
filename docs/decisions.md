@@ -114,3 +114,11 @@ Tesseract long-beam on surface d = 5 takes 2–50 ms per shot depending on p; on
 d = 7 the first timing didn't finish in 10 minutes on the 2-core container.
 d = 5 reference results are done; d = 7 Tesseract runs when a many-core
 machine (cluster or rented CPU box) is available. PyMatching covers d = 7 now.
+
+## 2026-11-20: Training noise level must be calibrated for uniform noise too
+Reference results (`docs/results/2026-11-20_reference_surface.md`): under our
+uniform noise, PyMatching gets *worse* from d = 5 to d = 7 at p = 0.5%, i.e.
+0.5% is above threshold. Our uniform model is harsher than the paper's, so the
+paper's p_train = 0.7% likely sits above threshold. The first GPU session
+calibrates p_train ∈ {0.3%, 0.5%, 0.7%} on d = 5 (scored on identical test
+shots) before the learning-rate runs. Tuning budget stays at 5–6 short runs.

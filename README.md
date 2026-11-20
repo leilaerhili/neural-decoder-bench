@@ -37,7 +37,7 @@ A fair, side-by-side comparison of neural decoders for quantum error correction.
 - **Reference decoders** (`src/ndbench/decoders/`): Tesseract, Relay-BP and PyMatching, all ready to run.
 - **Scorekeeper** (`src/ndbench/eval/`): counts each decoder's mistakes and saves the results.
 - **Cascade, first version** (`src/ndbench/models/cascade.py`, `training.py`): written and training. First run on the smallest surface code beats PyMatching and ties Tesseract; see [`docs/results/`](docs/results/).
-- **Tests** (`tests/`): 78 self-checks, all passing.
+- **Tests** (`tests/`): 83 self-checks, all passing.
 - **Placeholder for the GNN** (`src/ndbench/models/gnn.py`): described, not built yet.
 - **The plan** ([`docs/PLAN.md`](docs/PLAN.md)): the detailed step-by-step roadmap. Decisions made along the way are in [`docs/decisions.md`](docs/decisions.md).
 
