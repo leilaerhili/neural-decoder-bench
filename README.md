@@ -36,14 +36,15 @@ A fair, side-by-side comparison of neural decoders for quantum error correction.
 - **Test-case generator** (`src/ndbench/data/`): gives every decoder the same problems.
 - **Reference decoders** (`src/ndbench/decoders/`): Tesseract, Relay-BP and PyMatching, all ready to run.
 - **Scorekeeper** (`src/ndbench/eval/`): counts each decoder's mistakes and saves the results.
-- **Tests** (`tests/`): 44 self-checks, all passing.
-- **Placeholders for Cascade and the GNN** (`src/ndbench/models/`): described, not built yet.
+- **Cascade, first version** (`src/ndbench/models/cascade.py`, `training.py`): written and training. First run on the smallest surface code beats PyMatching and ties Tesseract; see [`docs/results/`](docs/results/).
+- **Tests** (`tests/`): 83 self-checks, all passing.
+- **Placeholder for the GNN** (`src/ndbench/models/gnn.py`): described, not built yet.
 - **The plan** ([`docs/PLAN.md`](docs/PLAN.md)): the detailed step-by-step roadmap. Decisions made along the way are in [`docs/decisions.md`](docs/decisions.md).
 
 ## The steps (about 16 weeks)
 
 1. **Testing setup.** Mostly done ✅
-2. **Build Cascade** and check it on the surface code. This is the hardest step.
+2. **Build Cascade** and check it on the surface code. This is the hardest step. *In progress: code written, first small run works; next is GPU training at larger sizes.*
 3. **Build the GNN** and check it. Easier, since its authors shared their code.
 4. **Move both to the BB codes.** Measure the cost first; use the smaller code if the Gross code is too expensive.
 5. **Adapt both to the color code.**
@@ -55,7 +56,7 @@ A fair, side-by-side comparison of neural decoders for quantum error correction.
 
 - Email the Cascade authors asking for their code.
 - Ask about university computing time.
-- Start step 2: building Cascade.
+- Rent a GPU and train Cascade on the distance-5 and distance-7 surface codes, following [`docs/GPU_RUNBOOK.md`](docs/GPU_RUNBOOK.md).
 
 ## How to run it
 
@@ -66,7 +67,7 @@ Needs Python 3.11 or 3.12 (one of the tools doesn't work with 3.13 yet). On a Ma
 curl -LsSf https://astral.sh/uv/install.sh | sh        # installs uv, which sets up Python
 uv venv -p 3.12 .venv
 source .venv/bin/activate
-uv pip install -e ".[baselines,dev]"
+uv pip install -e ".[baselines,nn,dev]"
 
 # each time you open a new Terminal window
 source .venv/bin/activate
@@ -83,6 +84,14 @@ python scripts/eval_reference.py --decoder pymatching --code surface_d5 \
 ```
 
 The score is printed and saved to `results/`.
+
+Train a small Cascade (about 12 minutes on a laptop CPU) and score it next to PyMatching:
+
+```bash
+python scripts/train_cascade.py --code surface_d3 --p-train 0.005 \
+    --samples 2.5e6 --batch 512 --hidden 64 --layers 3 --out runs/d3_proof
+python scripts/eval_checkpoint.py runs/d3_proof/final.pt --p 0.003
+```
 
 ## Credits
 

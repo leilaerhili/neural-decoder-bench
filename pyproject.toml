@@ -21,7 +21,8 @@ baselines = [
     "relay-bp[stim]>=0.2",
     "beliefmatching",       # needed by relay_bp.stim
 ]
-nn = ["torch>=2.4", "torch-geometric>=2.5"]
+nn = ["torch>=2.4"]                    # Cascade
+gnn = ["torch>=2.4", "torch-geometric>=2.5"]  # GNN decoder (Phase 3)
 dev = ["pytest>=8"]
 
 [tool.setuptools.packages.find]
@@ -33,4 +34,4 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -m 'not slow'"
-markers = ["slow: runs reference decoders on BB codes (minutes)"]
+markers = ["slow: runs reference decoders on BB codes or trains a model (minutes)"]
