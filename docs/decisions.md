@@ -75,3 +75,26 @@ budget.
 ## 2026-11-06: README rewritten as a plain-language overview
 The README now explains the project, scope, repo contents and next steps in
 plain language, plus setup instructions. Technical detail lives in `PLAN.md`.
+
+## 2026-11-20: Repo cleanup
+The `.gitignore` was lost when the project folder was copied, so build junk
+(`__pycache__/`, `ndbench.egg-info/`) had been committed. Restored the
+`.gitignore` and removed the junk from git.
+
+## 2026-11-20: Cascade (surface code) built; design choices
+- **Optimizer: AdamW for every neural decoder**, not the paper's Muon + Lion.
+  Same optimizer for every model is part of the fairness rules (D6). Reverse
+  if: Cascade lands far from the paper's accuracy and Muon is a plausible
+  cause (then test Muon for *all* models).
+- **Check-type input channels.** A convolution applies the same rule
+  everywhere, so it can't tell X checks from Z checks unless told. Two fixed
+  input channels mark them.
+- **Readout:** 2 x 2 convolution from check pixels to data qubits, average over
+  time, then average over the logical observable's data qubits, then a 2-layer
+  MLP, following the paper's description.
+- **EMA warm-up:** the averaged weights start from the random initial weights;
+  with a fixed decay they dominate short runs (found in the first test run:
+  validation error stuck at the starting value). The decay now ramps up as
+  (1 + n) / (10 + n), the standard fix.
+- **Not yet added (needed for GPU runs):** sampling in worker processes, bf16,
+  the paper's short low-p curriculum.

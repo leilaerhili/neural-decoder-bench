@@ -14,6 +14,12 @@ The tesseract-decoder circuits give every detector coordinates (x, y, t, k):
 Not every pixel is a stabilizer (the rotated surface code leaves corners and
 alternating edge cells empty), and the first and last time slices only contain
 one check type. Empty pixels are zero, as in the Cascade paper.
+
+Data qubits sit at integer coordinates (x, y) in {0, ..., d-1}, i.e. at the
+corners shared by four pixels: data qubit (x, y) lies between pixel rows y, y+1
+and columns x, x+1. A 2 x 2 convolution over the pixel grid therefore gives one
+feature vector per data qubit, on a d x d grid indexed [y, x]. `support` marks
+which data qubits each logical observable is read from.
 """
 
 from __future__ import annotations
@@ -34,6 +40,7 @@ class SurfaceLayout:
     col: np.ndarray  # (D,)
     det_type: np.ndarray  # (D,) X_TYPE or Z_TYPE
     cell_type: np.ndarray  # (H, W) which check lives at each pixel (0 = none)
+    support: np.ndarray  # (k, H-1, W-1) bool: data qubits in each logical observable
 
     @classmethod
     def from_circuit(cls, circuit: stim.Circuit) -> "SurfaceLayout":
@@ -57,7 +64,8 @@ class SurfaceLayout:
             if cell_type[r, cc] not in (0, k):
                 raise ValueError(f"pixel ({r}, {cc}) holds both check types")
             cell_type[r, cc] = k
-        return cls(shape, t, row, col, det_type, cell_type)
+        support = _observable_support(circuit, (shape[1] - 1, shape[2] - 1))
+        return cls(shape, t, row, col, det_type, cell_type, support)
 
     def to_tensor(self, dets: np.ndarray) -> np.ndarray:
         """(shots, D) bool -> (shots, T, H, W) float32, empty pixels = 0."""
@@ -78,3 +86,27 @@ class SurfaceLayout:
         fixed channels are fed alongside the detection events.
         """
         return np.stack([self.cell_type == X_TYPE, self.cell_type == Z_TYPE]).astype(np.float32)
+
+
+MEASURE_GATES = {"M", "MZ", "MX", "MY", "MR", "MRZ", "MRX", "MRY"}
+
+
+def _observable_support(circuit: stim.Circuit, data_shape: tuple[int, int]) -> np.ndarray:
+    """(k, d, d) bool: data qubits whose final measurement enters each observable."""
+    coords = circuit.get_final_qubit_coordinates()
+    support = np.zeros((circuit.num_observables, *data_shape), dtype=bool)
+    measured: list[int] = []  # qubit of each measurement, in record order
+    for inst in circuit.flattened():
+        if inst.name in MEASURE_GATES:
+            measured += [t.value for t in inst.targets_copy() if t.is_qubit_target]
+        elif inst.name == "OBSERVABLE_INCLUDE":
+            k = int(inst.gate_args_copy()[0])
+            for tgt in inst.targets_copy():
+                if not tgt.is_measurement_record_target:
+                    continue
+                q = measured[len(measured) + tgt.value]
+                x, y = coords[q][:2]
+                if not (float(x).is_integer() and float(y).is_integer()):
+                    raise ValueError(f"observable reads non-data qubit {q} at {coords[q]}")
+                support[k, int(y), int(x)] = True
+    return support
