@@ -163,3 +163,15 @@ def test_resume_refuses_a_different_config(tmp_path):
     train(_tiny_cfg(), tmp_path, quiet=True, stop_after_steps=6)
     with pytest.raises(ValueError):
         train(_tiny_cfg(lr=5e-4), tmp_path, quiet=True)
+
+
+def test_auto_device_never_picks_apple_gpu(monkeypatch):
+    """Apple's MPS backend crashes on Cascade's 3D convolutions on some macOS
+    versions, so "auto" must fall back to the CPU when there's no NVIDIA GPU."""
+    from ndbench.training import pick_device
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    if hasattr(torch.backends, "mps"):
+        monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)
+    assert pick_device("auto").type == "cpu"
+    assert pick_device("cpu").type == "cpu"
